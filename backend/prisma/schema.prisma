@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User{
+  id            String            @id @default(uuid())
+  email         String            @unique
+  username      String        
+  password      String        
+  avatarUrl     String?
+  isOnline      Boolean               @default(false)
+  lastSeen      DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  memberships   ChatMember[]
+  sentMessages  Message[]
+  readReceipts  MessageRead[]
+  sessions      Session[]
+
+  @@index([email])
+}
+
+
+model Chat{
+  id            String            @id @default(uuid())
+  type          ChatType          
+  name          String?
+  avatarUrl     String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  members       ChatMember[]
+  messages      Message[]
+
+  @@index([type])
+}
+
+
+model ChatMember{
+  id            String            @id @default(uuid())
+  userId        String  
+  chatId        String
+  role          ChatRole              @default(MEMBER)  
+  joinedAt      DateTime              @default(now())
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat          Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatId])
+  @@index([chatId])
+  @@index([userId])
+
+}
+
+
+model Message{
+  id            String            @id @default(uuid())
+  chatId        String 
+  senderId      String
+  type          MessageType
+  content       String?
+  imageUrl      String?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+
+  chat          Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender        User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reads         MessageRead[]
+
+  @@index([chatId, createdAt])
+  @@index([senderId])
+}
+
+
+model MessageRead{
+  id            String             @id @default(uuid())
+  messageId     String             
+  userId        String
+  readAt        DateTime                @default(now())
+
+  message       Message           @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])   
+}
+
+
+model Session{
+  id            String            @id @default(uuid())
+  userId        String            
+  refreshToken  String            @unique
+  userAgent     String?
+  ipAddress     String?
+  createdAt     DateTime          @default(now())
+  expiresAt     DateTime
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+
+enum ChatType{
+  PRIVATE
+  GROUP
+}
+
+enum ChatRole{
+  ADMIN
+  MEMBER
+}
+
+enum MessageType{
+  TEXT
+  IMAGE
+}
