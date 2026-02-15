@@ -1,4 +1,4 @@
-export type JwtUserPayload = {
+export interface IJwtUserPayload {
   id: string;
   email: string;
   username: string;
@@ -7,4 +7,4 @@ export type JwtUserPayload = {
   lastSeen: Date | null;
   createdAt: Date;
   updatedAt: Date;
-};
+}

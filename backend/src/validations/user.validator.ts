@@ -26,3 +26,10 @@ export const registerUserSchema = z
   .strict();
 
 export type RegisterInput = z.infer<typeof registerUserSchema>;
+
+export const loginUserSchema = z.object({
+  identifier: z.string().min(3, "Email or username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type LoginUserInput = z.infer<typeof loginUserSchema>;

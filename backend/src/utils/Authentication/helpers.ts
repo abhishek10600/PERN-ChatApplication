@@ -3,9 +3,6 @@ import { JwtUserPayload } from "../../types";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
 import dotenv from "dotenv";
-dotenv.config({
-  path: "./.env",
-});
 
 export const generateAccessToken = (user: JwtUserPayload) => {
   const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET as Secret;
@@ -54,7 +51,7 @@ export const isPasswordCorrect = async (
   return await bcrypt.compare(password, hashedPassword);
 };
 
-export const setAuthCokies = (
+export const setAuthCookies = (
   res: any,
   accessToken: string,
   refreshToken: string

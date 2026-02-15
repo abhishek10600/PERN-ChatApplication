@@ -1,8 +1,12 @@
 import express from "express";
 import { validateData } from "../middlewares/validate.middleware";
-import { registerUserSchema } from "../validations/user.validator";
+import {
+  loginUserSchema,
+  registerUserSchema,
+} from "../validations/user.validator";
 import { upload } from "../middlewares/multer.middleware";
-import { registerUser } from "../controllers/user.controller";
+import { loginUser, registerUser, logoutUser } from "../controllers/user.controller";
+import { verifyJWT } from "../middlewares/auth.middleware";
 
 const router = express.Router();
 
@@ -13,5 +17,8 @@ router
     validateData(registerUserSchema),
     registerUser
   );
+
+router.route("/login").post(validateData(loginUserSchema), loginUser);
+router.route("/logout").post(verifyJWT, logoutUser);
 
 export default router;
