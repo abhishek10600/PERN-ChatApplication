@@ -11,6 +11,7 @@ import {
 } from "../utils/Authentication/helpers";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
+import jwt from "jsonwebtoken";
 
 export const registerUser = async (req: Request, res: Response) => {
   try {
@@ -204,6 +205,95 @@ export const logoutUser = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     // console.error("Login User Error: ", error);
 
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      errors: [],
+    });
+  }
+};
+
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const refreshToken =
+      req.cookies?.refreshToken ||
+      req.header("Authorization")?.replace("Bearer ", "");
+
+    if (!refreshToken) {
+      throw new ApiError(401, "Refresh token missing");
+    }
+
+    const hashedToken = hashToken(refreshToken);
+
+    const session = await prisma.session.findUnique({
+      where: { refreshToken: hashedToken },
+      include: { user: true },
+    });
+
+    if (!session) {
+      try {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_SECRET!
+        ) as { id: string };
+
+        await prisma.session.deleteMany({
+          where: { userId: decoded.id },
+        });
+      } catch (error) {}
+
+      throw new ApiError(403, "Refresh token reuse detected");
+    }
+
+    if (session.expiresAt < new Date()) {
+      await prisma.session.delete({
+        where: { id: session.id },
+      });
+
+      throw new ApiError(403, "Refresh token expired");
+    }
+
+    const user = session.user;
+
+    await prisma.session.delete({
+      where: { id: session.id },
+    });
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    const newHashedToken = hashToken(newRefreshToken);
+
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: newHashedToken,
+        userAgent: req.headers["user-agent"],
+        ipAddress: req.ip,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    setAuthCookies(res, newAccessToken, newRefreshToken);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken: newAccessToken, refreshToken: newRefreshToken },
+          "Token refreshed successfully"
+        )
+      );
+  } catch (error: unknown) {
     if (error instanceof ApiError) {
       return res.status(error.statusCode).json({
         success: false,

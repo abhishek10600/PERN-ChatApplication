@@ -26,5 +26,9 @@ app.get("/test", (req, res) => {
 });
 
 import userRouter from "./routes/user.route";
+import chatRouter from "./routes/chat.route";
+import messageRouter from "./routes/message.route";
 
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/chats", chatRouter);
+app.use("/api/v1/messages", messageRouter);

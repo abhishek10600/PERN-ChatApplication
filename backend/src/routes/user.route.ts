@@ -5,7 +5,12 @@ import {
   registerUserSchema,
 } from "../validations/user.validator";
 import { upload } from "../middlewares/multer.middleware";
-import { loginUser, registerUser, logoutUser } from "../controllers/user.controller";
+import {
+  loginUser,
+  registerUser,
+  logoutUser,
+  refreshToken,
+} from "../controllers/user.controller";
 import { verifyJWT } from "../middlewares/auth.middleware";
 
 const router = express.Router();
@@ -20,5 +25,6 @@ router
 
 router.route("/login").post(validateData(loginUserSchema), loginUser);
 router.route("/logout").post(verifyJWT, logoutUser);
+router.route("/refresh-token").post(refreshToken);
 
 export default router;
