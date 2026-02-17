@@ -3,11 +3,14 @@ import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { prisma } from "../utils/db";
+import { io } from "../index";
 
 export const sendMessage = async (req: Request, res: Response) => {
   try {
     const senderId = req.user?.id;
     const { chatId, content } = req.body;
+
+    const trimmedContent = content?.trim();
 
     if (!senderId) {
       throw new ApiError(401, "Unauthorized");
@@ -46,7 +49,7 @@ export const sendMessage = async (req: Request, res: Response) => {
       imageUrl = cloudinaryResult.url;
     }
 
-    if (!content && !imageUrl) {
+    if (!trimmedContent && !imageUrl) {
       throw new ApiError(400, "Message must contain text or image");
     }
 
@@ -55,7 +58,7 @@ export const sendMessage = async (req: Request, res: Response) => {
         chatId,
         senderId,
         type: imageUrl ? "IMAGE" : "TEXT",
-        content: content || null,
+        content: trimmedContent || null,
         imageUrl: imageUrl || null,
       },
       include: {
@@ -68,6 +71,8 @@ export const sendMessage = async (req: Request, res: Response) => {
         },
       },
     });
+
+    io.to(`chat:${chatId}`).emit("new_message", message);
 
     return res.status(201).json(new ApiResponse(201, message, "Message sent"));
   } catch (error: unknown) {

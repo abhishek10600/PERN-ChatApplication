@@ -4,10 +4,31 @@ dotenv.config({
 });
 
 import { app } from "./app";
-import { DATABASE_URL } from "./constants";
+import { Server } from "socket.io";
+import { createServer } from "http";
+import { registerChatHandler } from "./sockets/chat.socket";
 
 const port = process.env.PORT || 4001;
 
-app.listen(port, () => {
+const httpServer = createServer(app);
+
+export const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGINS,
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected: ", socket.id);
+
+  registerChatHandler(io, socket);
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected: ", socket.id);
+  });
+});
+
+httpServer.listen(port, () => {
   console.log(`server running on PORT ${port}`);
 });
